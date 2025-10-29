@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Chat Storage</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .test-section {
+            background: #f5f5f5;
+            padding: 15px;
+            margin: 10px 0;
+            border-radius: 5px;
+        }
+        button {
+            background: #007cba;
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            margin: 5px;
+            border-radius: 3px;
+            cursor: pointer;
+        }
+        button:hover {
+            background: #005a87;
+        }
+        .output {
+            background: #fff;
+            border: 1px solid #ddd;
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 3px;
+            white-space: pre-wrap;
+            font-family: monospace;
+        }
+    </style>
+</head>
+<body>
+    <h1>🔧 Test de Persistencia del Chat IA</h1>
+    
+    <div class="test-section">
+        <h3>📊 Estado Actual del LocalStorage</h3>
+        <button onclick="checkStorage()">Verificar Storage</button>
+        <button onclick="clearStorage()">Limpiar Storage</button>
+        <div id="storage-output" class="output"></div>
+    </div>
+    
+    <div class="test-section">
+        <h3>➕ Agregar Mensaje de Prueba</h3>
+        <input type="text" id="test-message" placeholder="Escribe un mensaje de prueba" style="width: 300px; padding: 8px;">
+        <button onclick="addTestMessage()">Agregar Mensaje</button>
+        <div id="add-output" class="output"></div>
+    </div>
+    
+    <div class="test-section">
+        <h3>📋 Cargar Mensajes</h3>
+        <button onclick="loadMessages()">Cargar Mensajes</button>
+        <div id="load-output" class="output"></div>
+    </div>
+    
+    <div class="test-section">
+        <h3>🔄 Simular Cambio de Página</h3>
+        <button onclick="simulatePageChange()">Simular Navegación</button>
+        <div id="simulate-output" class="output"></div>
+    </div>
+
+    <script>
+        // Simular el mismo sistema que usa el chat
+        const userSessionId = 'test_user_123'; // Simular ID de usuario
+        const globalStorageKey = 'revive_chat_global_' + userSessionId;
+        const globalMessagesKey = 'revive_chat_messages_global_' + userSessionId;
+        
+        // Sistema de almacenamiento idéntico al del chat
+        const ChatStorage = {
+            saveMessages: function(messages) {
+                try {
+                    const messageData = {
+                        messages: messages,
+                        timestamp: Date.now(),
+                        userId: userSessionId
+                    };
+                    localStorage.setItem(globalMessagesKey, JSON.stringify(messageData));
+                    console.log('💾 Mensajes guardados globalmente:', messages.length);
+                    return true;
+                } catch (e) {
+                    console.error('❌ Error guardando mensajes:', e);
+                    return false;
+                }
+            },
+            
+            loadMessages: function() {
+                try {
+                    const saved = localStorage.getItem(globalMessagesKey);
+                    if (!saved) {
+                        console.log('📭 No hay mensajes guardados');
+                        return [];
+                    }
+                    
+                    const messageData = JSON.parse(saved);
+                    const messages = messageData.messages || [];
+                    console.log('📬 Mensajes cargados globalmente:', messages.length);
+                    return messages;
+                } catch (e) {
+                    console.error('❌ Error cargando mensajes:', e);
+                    return [];
+                }
+            },
+            
+            addMessage: function(message) {
+                const currentMessages = this.loadMessages();
+                
+                const isDuplicate = currentMessages.some(msg => 
+                    msg.text === message.text && 
+                    Math.abs((msg.timestamp || 0) - (message.timestamp || Date.now())) < 1000
+                );
+                
+                if (!isDuplicate) {
+                    message.timestamp = message.timestamp || Date.now();
+                    currentMessages.push(message);
+                    this.saveMessages(currentMessages);
+                    console.log('➕ Nuevo mensaje agregado:', message.text?.substring(0, 50) + '...');
+                    return true;
+                }
+                return false;
+            }
+        };
+        
+        function checkStorage() {
+            const output = document.getElementById('storage-output');
+            let result = '=== ESTADO DEL LOCALSTORAGE ===\n\n';
+            
+            // Verificar todas las claves relacionadas con el chat
+            const allKeys = Object.keys(localStorage);
+            const chatKeys = allKeys.filter(key => key.includes('revive_chat'));
+            
+            result += `Total de claves en localStorage: ${allKeys.length}\n`;
+            result += `Claves relacionadas con chat: ${chatKeys.length}\n\n`;
+            
+            if (chatKeys.length > 0) {
+                result += 'CLAVES ENCONTRADAS:\n';
+                chatKeys.forEach(key => {
+                    const value = localStorage.getItem(key);
+                    result += `\n🔑 ${key}:\n`;
+                    try {
+                        const parsed = JSON.parse(value);
+                        result += `   Tipo: ${typeof parsed}\n`;
+                        if (parsed.messages) {
+                            result += `   Mensajes: ${parsed.messages.length}\n`;
+                            result += `   Timestamp: ${new Date(parsed.timestamp).toLocaleString()}\n`;
+                        }
+                    } catch (e) {
+                        result += `   Valor: ${value.substring(0, 100)}...\n`;
+                    }
+                });
+            } else {
+                result += '❌ No se encontraron claves de chat en localStorage\n';
+            }
+            
+            // Verificar la clave específica que debería usar el chat
+            result += `\n=== CLAVE ESPECÍFICA ===\n`;
+            result += `Buscando: ${globalMessagesKey}\n`;
+            const specificValue = localStorage.getItem(globalMessagesKey);
+            if (specificValue) {
+                result += '✅ Clave encontrada\n';
+                try {
+                    const data = JSON.parse(specificValue);
+                    result += `Mensajes almacenados: ${data.messages?.length || 0}\n`;
+                } catch (e) {
+                    result += '❌ Error parseando datos\n';
+                }
+            } else {
+                result += '❌ Clave no encontrada\n';
+            }
+            
+            output.textContent = result;
+        }
+        
+        function clearStorage() {
+            const output = document.getElementById('storage-output');
+            const allKeys = Object.keys(localStorage);
+            const chatKeys = allKeys.filter(key => key.includes('revive_chat'));
+            
+            chatKeys.forEach(key => localStorage.removeItem(key));
+            
+            output.textContent = `🗑️ Limpiado ${chatKeys.length} claves de chat del localStorage`;
+        }
+        
+        function addTestMessage() {
+            const input = document.getElementById('test-message');
+            const output = document.getElementById('add-output');
+            const messageText = input.value.trim();
+            
+            if (!messageText) {
+                output.textContent = '❌ Por favor escribe un mensaje';
+                return;
+            }
+            
+            const testMessage = {
+                text: messageText,
+                sender: 'user',
+                timestamp: Date.now(),
+                id: 'test_' + Date.now()
+            };
+            
+            const success = ChatStorage.addMessage(testMessage);
+            
+            if (success) {
+                output.textContent = `✅ Mensaje agregado: "${messageText}"\nTimestamp: ${new Date().toLocaleString()}`;
+                input.value = '';
+            } else {
+                output.textContent = '❌ Error agregando mensaje o mensaje duplicado';
+            }
+        }
+        
+        function loadMessages() {
+            const output = document.getElementById('load-output');
+            const messages = ChatStorage.loadMessages();
+            
+            let result = `=== MENSAJES CARGADOS (${messages.length}) ===\n\n`;
+            
+            if (messages.length === 0) {
+                result += '📭 No hay mensajes guardados\n';
+            } else {
+                messages.forEach((msg, index) => {
+                    result += `${index + 1}. [${msg.sender?.toUpperCase() || 'UNKNOWN'}] ${msg.text}\n`;
+                    result += `   Timestamp: ${new Date(msg.timestamp).toLocaleString()}\n\n`;
+                });
+            }
+            
+            output.textContent = result;
+        }
+        
+        function simulatePageChange() {
+            const output = document.getElementById('simulate-output');
+            
+            // Simular que guardamos mensajes antes de cambiar de página
+            const testMessages = [
+                { text: 'Hola, necesito ayuda con mi proyecto', sender: 'user', timestamp: Date.now() - 5000 },
+                { text: '¡Hola! Estoy aquí para ayudarte. ¿En qué tipo de proyecto estás trabajando?', sender: 'bot', timestamp: Date.now() - 3000 },
+                { text: 'Quiero renovar mi cocina', sender: 'user', timestamp: Date.now() - 1000 }
+            ];
+            
+            ChatStorage.saveMessages(testMessages);
+            
+            // Simular cambio de página (limpiar y recargar)
+            setTimeout(() => {
+                const reloadedMessages = ChatStorage.loadMessages();
+                
+                let result = '🔄 SIMULACIÓN DE CAMBIO DE PÁGINA\n\n';
+                result += `1. Guardados ${testMessages.length} mensajes de prueba\n`;
+                result += `2. Simulando cambio de página...\n`;
+                result += `3. Recargados ${reloadedMessages.length} mensajes\n\n`;
+                
+                if (reloadedMessages.length === testMessages.length) {
+                    result += '✅ PERSISTENCIA FUNCIONANDO CORRECTAMENTE\n';
+                    result += 'Los mensajes se mantienen al cambiar de página\n';
+                } else {
+                    result += '❌ PROBLEMA DE PERSISTENCIA\n';
+                    result += 'Los mensajes no se mantienen al cambiar de página\n';
+                }
+                
+                output.textContent = result;
+            }, 1000);
+            
+            output.textContent = '⏳ Simulando cambio de página...';
+        }
+        
+        // Cargar estado inicial
+        window.addEventListener('load', function() {
+            checkStorage();
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,21 @@
+# OS junk
+.DS_Store
+Thumbs.db
+
+# IDE/editor
+.vscode/
+.idea/
+
+# PHP & Composer
+vendor/
+composer.lock
+
+# Local environment
+.env
+
+# Runtime data and uploads
+storage/
+public/uploads/
+
+# Node (if introduced later)
+node_modules/
