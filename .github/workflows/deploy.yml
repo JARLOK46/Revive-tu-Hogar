@@ -1,0 +1,31 @@
+name: Deploy to Hosting via FTP
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Deploy via FTP (FTPS)
+        uses: SamKirkland/FTP-Deploy-Action@v4.3.6
+        with:
+          server: ${{ secrets.FTP_SERVER }}
+          username: ${{ secrets.FTP_USERNAME }}
+          password: ${{ secrets.FTP_PASSWORD }}
+          protocol: ftps
+          # Ruta en el servidor donde se subirá el proyecto.
+          # Usualmente es "public_html" en cPanel.
+          server-dir: ${{ secrets.SERVER_DIR }}
+          local-dir: .
+          exclude: |
+            **/.git**
+            **/.github/**
+            **/.DS_Store
+            **/Thumbs.db
+            revivetuhogar.sql
